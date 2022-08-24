@@ -11,7 +11,6 @@ use std::sync::mpsc::{Sender};
 use std::sync::mpsc::TryRecvError;
 use std::{thread, time};
 
-
 struct Config {
     action: String,
     queue: String,
