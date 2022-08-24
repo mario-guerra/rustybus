@@ -144,7 +144,7 @@ async fn receive(client: Client) {
 
             match value {
                 Ok(message) => {println!("Message: {}", message);},
-                Err(error) => {println!("Error with message: {}", error);},
+                Err(_error) => {println!("No messages in queue");},
             }
         });
     }
