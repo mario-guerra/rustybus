@@ -52,7 +52,7 @@ fn sleep(millis: u64) {
     thread::sleep(duration);
 }
 
-#[tokio::main]
+#[async_std::main]
 async fn main() {
     // Spawn a thread + channel to check for piped input - valid for use with send command only
     let (tx, rx) = mpsc::channel::<String>();
