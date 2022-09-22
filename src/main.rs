@@ -1,7 +1,6 @@
 use azure_messaging_servicebus::prelude::*;
 use rustdotenv::load;
 use serde_json::{Value};
-use async_std::task;
 use std::time::Duration;
 use std::env;
 use std::process;
@@ -52,7 +51,7 @@ fn sleep(millis: u64) {
     thread::sleep(duration);
 }
 
-#[async_std::main]
+#[tokio::main]
 async fn main() {
     // Spawn a thread + channel to check for piped input - valid for use with send command only
     let (tx, rx) = mpsc::channel::<String>();
@@ -122,52 +121,46 @@ async fn send(client: Client, message_to_send: String) {
     // Remove newline chars from JSON string
     let message = message_to_send.replace("\n", "");
 
-    task::block_on(async {
-        client.send_message(&message)
-            .await
-            .expect("Failed to send message");
-            // If the previous statement doesn't error out 
-            // we can assume the send was successful. 
-            println!("Message sent!");
-    });
+    client.send_message(&message)
+        .await
+        .expect("Failed to send message");
+        // If the previous statement doesn't error out
+        // we can assume the send was successful.
+        println!("Message sent!");
 }
 
 /// Handle receiving messages. 
 async fn receive(client: Client) {
-        task::block_on(async {
-            let received_message = client
-            .receive_and_delete_message()
-            .await
-            .expect("Failed to receive message");
-            
-            let value: Result<Value, serde_json::Error> = serde_json::from_str(&received_message);
-
-            match value {
-                Ok(message) => {println!("Message: {}", message);},
-                Err(_error) => {println!("No messages in queue");},
-            }
-        });
-    }
-
-/// Handle peeking at messages
-async fn peek(client: Client) {
-    task::block_on(async {
-        let three_seconds = Duration::new(3,0);
-        let peek_message = client
-        .peek_lock_message2(Some(three_seconds))
+    let received_message = client
+        .receive_and_delete_message()
         .await
         .expect("Failed to receive message");
 
-        let value: Result<Value, serde_json::Error> = serde_json::from_str(&peek_message.body());
-        match value {
-            Ok(message) => {
-                println!("Peek message: {}", message);
-                let unlock = peek_message.unlock_message().await;
-                if unlock.is_err() {
-                    println!("Unable to unlock message");
-                }
-            },
-            Err(_error) => {println!("No messages in queue");},
-        }
-    });
+    let value: Result<Value, serde_json::Error> = serde_json::from_str(&received_message);
+
+    match value {
+        Ok(message) => {println!("Message: {}", message);},
+        Err(_error) => {println!("No messages in queue");},
+    }
+}
+
+/// Handle peeking at messages
+async fn peek(client: Client) {
+    let three_seconds = Duration::new(3,0);
+    let peek_message = client
+    .peek_lock_message2(Some(three_seconds))
+    .await
+    .expect("Failed to receive message");
+
+    let value: Result<Value, serde_json::Error> = serde_json::from_str(&peek_message.body());
+    match value {
+        Ok(message) => {
+            println!("Peek message: {}", message);
+            let unlock = peek_message.unlock_message().await;
+            if unlock.is_err() {
+                println!("Unable to unlock message");
+            }
+        },
+        Err(_error) => {println!("No messages in queue");},
+    }
 }    
