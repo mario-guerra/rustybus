@@ -28,37 +28,15 @@ impl Config {
     }
 }
 
-/// Handle reading of input streamed via pipe
-fn spawn_stdin_channel(tx: Sender<String>) {
-    thread::spawn(move || loop {
-        let mut buffer = String::new();
-        match io::stdin().read_line(&mut buffer) {
-            Ok(_n) => {
-                let x = tx.send(buffer);
-                if x.is_ok() {
-                    continue;
-                } else {
-                    break;
-                }
-            }                
-            Err(error) => {println!("Error reading from stdin. Error: {}", error); break;}
-        }
-    });
-}
-
-fn sleep(millis: u64) {
-    let duration = time::Duration::from_millis(millis);
-    thread::sleep(duration);
-}
-
 #[tokio::main]
 async fn main() {
-    // Spawn a thread + channel to check for piped input - valid for use with send command only
+    // Spawn a thread + channel to check for piped input
+    // always spawned but only used for send
     let (tx, rx) = mpsc::channel::<String>();
     spawn_stdin_channel(tx);
     sleep(1000);
 
-    // Check for piped input on receiver side of channel
+    // Check for piped input on receiver side of channel - only valid with send
     let mut message_to_send: String = "".to_string();
     loop{
         match rx.try_recv() {
@@ -78,7 +56,7 @@ async fn main() {
         };
     };   
      
-    // Figure out what I'm supposed to do based on command line args
+    // Save command line args for later use
     let args: Vec<String> = env::args().collect();
     let config = Config::new(&args).unwrap_or_else(|err| {
         println!("Problem parsing arguments: {}", err);
@@ -116,6 +94,29 @@ async fn main() {
     }
 }
 
+/// Handle reading of input streamed via pipe for send command
+fn spawn_stdin_channel(tx: Sender<String>) {
+    thread::spawn(move || loop {
+        let mut buffer = String::new();
+        match io::stdin().read_line(&mut buffer) {
+            Ok(_n) => {
+                let x = tx.send(buffer);
+                if x.is_ok() {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            Err(error) => {println!("Error reading from stdin. Error: {}", error); break;}
+        }
+    });
+}
+
+fn sleep(millis: u64) {
+    let duration = time::Duration::from_millis(millis);
+    thread::sleep(duration);
+}
+
 /// Handle sending messages
 async fn send(client: Client, message_to_send: String) {
     // Remove newline chars from JSON string
@@ -124,8 +125,8 @@ async fn send(client: Client, message_to_send: String) {
     client.send_message(&message)
         .await
         .expect("Failed to send message");
-        // If the previous statement doesn't error out
-        // we can assume the send was successful.
+        // If the previous statement doesn't return an
+        // error we can assume the send was successful.
         println!("Message sent!");
 }
 
