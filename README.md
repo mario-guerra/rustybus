@@ -15,7 +15,8 @@ There are several preconfigured JSON formatted messages available in the json_fi
 be used with the rust-listener project (https://github.com/mario-guerra/rust-listener). Messages intended
 for sending to a queue must be piped as input to the rustybus executable.
 
-Use one of the following commands to interact with the service bus using a Windows terminal:
+Use one of the following commands to interact with the service bus using a Windows terminal.
+
 To send:
 >type .\json_files\sample_message_earth.json | cargo run send <queue name>
 or
